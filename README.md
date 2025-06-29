@@ -1,12 +1,14 @@
 # FastAPI Observability Demo
 
-A FastAPI application with complete observability stack using Prometheus and Grafana for monitoring and metrics visualization.
+A FastAPI application with complete observability stack using Prometheus, Grafana, and Jaeger for comprehensive monitoring, metrics visualization, and distributed tracing.
 
 ## Features
 
 - **FastAPI Application**: Modern, fast web framework with automatic API documentation
 - **Prometheus Metrics**: Built-in metrics collection for request rates, duration, and custom metrics
-- **Grafana Dashboard**: Pre-configured dashboards for visualizing application metrics
+- **Grafana Dashboards**: Pre-configured dashboards for visualizing application metrics and traces
+- **Jaeger Tracing**: Distributed tracing for request flow visualization and performance analysis
+- **OpenTelemetry Integration**: Industry-standard observability instrumentation
 - **Docker Compose**: One-command setup with all services containerized
 - **UV Package Manager**: Fast Python package management for dependency handling
 
@@ -16,7 +18,16 @@ A FastAPI application with complete observability stack using Prometheus and Gra
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   FastAPI   │───▶│ Prometheus  │───▶│   Grafana   │
 │   :8000     │    │   :9090     │    │   :3000     │
+│             │    └─────────────┘    │             │
+│             │                       │  ┌──────────┤
+│             │    ┌─────────────┐    │  │ Jaeger   │
+│             │───▶│   Jaeger    │───▶│  │ UI/Query │
+│             │    │   :16686    │    │  └──────────┤
 └─────────────┘    └─────────────┘    └─────────────┘
+     │
+     │ OpenTelemetry
+     │ Traces
+     ▼
 ```
 
 ## Quick Start
@@ -48,6 +59,7 @@ A FastAPI application with complete observability stack using Prometheus and Gra
    - **FastAPI Documentation**: http://localhost:8000/docs
    - **Prometheus**: http://localhost:9090
    - **Grafana**: http://localhost:3000 (admin/admin)
+   - **Jaeger UI**: http://localhost:16686
 
 ## API Endpoints
 
@@ -73,15 +85,48 @@ The application exposes several types of metrics:
    - `app_requests_total` - Custom counter for tracking requests by endpoint
    - `app_request_duration_seconds` - Custom histogram for request durations
 
-### Grafana Dashboard
+### Grafana Dashboards
 
-The pre-configured dashboard includes:
+The setup includes two pre-configured dashboards:
 
+#### **Metrics Dashboard** (`fastapi-monitoring`):
 1. **Request Rate**: Shows the rate of incoming requests over time
 2. **Request Duration**: 95th and 50th percentile response times
 3. **Error Rate**: Percentage of 4XX and 5XX errors
 4. **Requests by Status Code**: Breakdown of requests by HTTP status
 5. **Custom Metrics**: Application-specific metrics visualization
+
+#### **Tracing Dashboard** (`fastapi-tracing`):
+1. **Service Map**: Visual representation of service dependencies
+2. **Request Latency Percentiles**: P50, P95, P99 latency tracking
+3. **Request Rate by Endpoint**: Traffic distribution across endpoints
+4. **Trace Search**: Interactive trace exploration and filtering
+5. **Key Performance Indicators**: Current metrics at a glance
+
+### Distributed Tracing
+
+The application uses **OpenTelemetry** for distributed tracing with **Jaeger** as the backend:
+
+1. **Automatic Instrumentation**:
+   - FastAPI requests and responses
+   - HTTP client calls (httpx, requests)
+   - Database-like operations simulation
+
+2. **Custom Spans**:
+   - `simulate_database_query`: Database operation simulation
+   - `validate_user_data`: User validation logic
+   - `database_insert`: Database insertion simulation
+
+3. **Trace Attributes**:
+   - User IDs, operation types, duration metrics
+   - Error tracking and status codes
+   - Service and version information
+
+4. **Features**:
+   - End-to-end request tracing
+   - Performance bottleneck identification
+   - Error correlation across services
+   - Service dependency mapping
 
 ## Development
 
@@ -148,20 +193,23 @@ wrk -t12 -c400 -d30s http://localhost:8000/
 fastapi-obs/
 ├── app/
 │   ├── __init__.py
-│   └── main.py              # FastAPI application with metrics
+│   └── main.py              # FastAPI application with metrics & tracing
 ├── prometheus/
 │   └── prometheus.yml       # Prometheus configuration
 ├── grafana/
 │   ├── provisioning/
 │   │   ├── datasources/
-│   │   │   └── prometheus.yml
+│   │   │   ├── prometheus.yml  # Prometheus datasource
+│   │   │   └── jaeger.yml      # Jaeger datasource
 │   │   └── dashboards/
-│   │       └── dashboard.yml
+│   │       └── dashboard.yml   # Dashboard provisioning
 │   └── dashboards/
-│       └── fastapi-dashboard.json
-├── docker-compose.yml       # Docker Compose configuration
+│       ├── fastapi-dashboard.json    # Metrics dashboard
+│       └── tracing-dashboard.json    # Tracing dashboard
+├── docker-compose.yml       # Docker Compose with all services
 ├── Dockerfile              # FastAPI application container
-├── pyproject.toml          # Python dependencies and project config
+├── pyproject.toml          # Dependencies including OpenTelemetry
+├── test_api.py             # Load testing script
 └── README.md
 ```
 
@@ -197,10 +245,12 @@ fastapi-obs/
 
 ### Common Issues
 
-1. **Port conflicts**: Make sure ports 3000, 8000, and 9090 are available
+1. **Port conflicts**: Make sure ports 3000, 8000, 9090, and 16686 are available
 2. **Docker build issues**: Try `docker-compose down && docker-compose up --build`
 3. **Metrics not showing**: Wait a few minutes for Prometheus to scrape metrics
 4. **Grafana dashboard empty**: Check that Prometheus is running and configured correctly
+5. **Traces not appearing**: Check that Jaeger is running and FastAPI can connect to it
+6. **Tracing errors**: Verify OpenTelemetry configuration and Jaeger agent connectivity
 
 ### Logs
 
@@ -209,6 +259,7 @@ View logs for each service:
 docker-compose logs fastapi
 docker-compose logs prometheus  
 docker-compose logs grafana
+docker-compose logs jaeger
 ```
 
 ## Production Considerations
